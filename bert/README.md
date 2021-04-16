@@ -101,7 +101,7 @@ CUDA_VISIBLE_DEVICES="0" nohup python -u ./run_glue_hapi.py \
 ```
 
 
-
+```
 export TASK_NAME=SST-2
 CUDA_VISIBLE_DEVICES="2" python -u ./run_glue_hapi.py \
     --model_type bert \
@@ -116,4 +116,5 @@ CUDA_VISIBLE_DEVICES="2" python -u ./run_glue_hapi.py \
     --save_steps 10 \
     --n_gpu 1 \
     --mode "O2"
+```
 
