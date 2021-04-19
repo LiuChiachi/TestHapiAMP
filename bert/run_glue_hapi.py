@@ -324,12 +324,6 @@ def do_train(args):
         model = model_class.from_pretrained(
             args.model_name_or_path, num_classes=num_classes)
 
-    # 使用预训练模型，需要手动把参数转成fp16:真的需要这一步吗？
-    # if mode == "O2" and not dynamic: 
-        # state_dict = model.state_dict()
-        # for i in range(len(model.parameters())):
-        #     if model.parameters()[i].dtype == "float":
-        #         model.parameter[i] = paddle.cast(model.parameter[i], "float16")
     if paddle.distributed.get_world_size() > 1:
         model = paddle.DataParallel(model)
 
@@ -356,7 +350,6 @@ def do_train(args):
             InputSpec([None, None], "int64", "seg")]
     labels = [InputSpec([None, 1], "int64", "label")]
    
-    # paddle.static.Print(model.state_dict()['classifier.weight'], message="dict")
     model = paddle.hapi.Model(model, inputs, labels)
    
 
@@ -380,22 +373,15 @@ def do_train(args):
         weight_decay=args.weight_decay,
         apply_decay_param_fun=lambda x: x in decay_params,)
     amp_configs = {"level": mode, "init_loss_scaling": 1.0, "custom_white_list": {"layer_norm", "softmax", "gelu"}, "custom_black_list": {'lookup_table', 'lookup_table_v2'}} if mode != "O0" else {"level": "O0"} 
-    # for i, data in enumerate(train_data_loader):
-        # print(data[0])
-        # if i > 5:
-            # break
-    # amp_configs = {"level": mode, "init_loss_scaling": 2**15, "custom_black_list":{"matmul_v2"}, "custom_white_list": {"layer_norm", "softmax", "gelu"}} if mode != "O0" else {"level": "O0"} 
     model.prepare(optimizer=optimizer, loss=loss_fct, amp_configs=amp_configs)
-    if mode == 'O2' and not dynamic: # pure fp16 不能一边训练一边eval，现在是会挂，why?TODO：定位
+    if mode == 'O2' and not dynamic:
         model.fit(train_data_loader,
-                # dev_data_loader,
                 batch_size=args.batch_size,
                 epochs=args.num_train_epochs,
                 log_freq=300,
                 callbacks=[paddle.callbacks.VisualDL(log_dir="./log/high_"+str(dynamic)+"_"+str(mode))])
     else:
         model.fit(train_data_loader,
-                # dev_data_loader,
                 batch_size=args.batch_size,
                 epochs=args.num_train_epochs,
                 log_freq=300, #len(train_ds) / 320,
